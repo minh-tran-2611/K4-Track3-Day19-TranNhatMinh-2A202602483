@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 import time
 from dataclasses import dataclass, fields
 from typing import Any
@@ -37,6 +38,7 @@ PRICES_PER_M = {
     "text-embedding-3-small": (0.02, 0.0),
     "text-embedding-3-large": (0.13, 0.0),
     "gemini-2.5-flash-lite": (0.10, 0.40),
+    "gemini-3.5-flash-lite": (0.30, 2.50),
     # Gemini embedding pricing intentionally omitted: the current pricing page does not list gemini-embedding-001.
     "claude-opus-5-5": (4.00, 20.00),
     "claude-sonnet-5-5": (2.00, 10.00),
@@ -85,6 +87,11 @@ def _strip_fences(text: str) -> str:
         text = text.rsplit("```", 1)[0]
     return text.strip()
 
+def _retry_delay(error: Exception, attempt: int) -> float:
+    """Seconds to wait after a 429: the provider's 'retry in Xs' hint if present, else exponential backoff."""
+    match = re.search(r"retry in ([\d.]+)s", str(error), re.IGNORECASE)
+    return float(match.group(1)) + 1 if match else min(60.0, 5.0 * 2 ** attempt)
+
 def _openai_client(provider: str):
     from openai import OpenAI
 
@@ -104,6 +111,7 @@ class MeteredLLM:
         self.embedding_model = f"{self.embed_provider}:{self.embed_model_id}"
         self._backend_name = self.embedding_model
         self.usage = Usage()
+        self.rate_limit_wait = 0.0   # seconds slept on 429s (free tiers); included in wall-clock latency
         self._chat_client: Any
         self._embed_client: Any
         if self.chat_provider == "anthropic":
@@ -120,14 +128,16 @@ class MeteredLLM:
             text, model, tokens_in, tokens_out = self._chat_anthropic(prompt)
         else:
             if json_mode and self.chat_provider != "gemini":
-                response = self._chat_client.chat.completions.create(
+                response = self._retrying(
+                    self._chat_client.chat.completions.create,
                     model=self.chat_model_id,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     response_format={"type": "json_object"},
                 )
             else:
-                response = self._chat_client.chat.completions.create(
+                response = self._retrying(
+                    self._chat_client.chat.completions.create,
                     model=self.chat_model_id,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0,
@@ -138,6 +148,22 @@ class MeteredLLM:
             tokens_out = usage.completion_tokens if usage else 0
         self.usage += Usage(1, tokens_in, tokens_out, price(model, tokens_in, tokens_out), time.perf_counter() - start)
         return _strip_fences(text) if json_mode else text
+
+    def _retrying(self, create: Any, max_attempts: int = 8, **kwargs: Any) -> Any:
+        """Call an OpenAI-compatible endpoint, sleeping and retrying on 429 (rate limit / free-tier quota)."""
+        from openai import RateLimitError
+
+        for attempt in range(max_attempts):
+            try:
+                return create(**kwargs)
+            except RateLimitError as error:
+                if attempt == max_attempts - 1:
+                    raise
+                delay = _retry_delay(error, attempt)
+                print(f"  [429] rate limit, đợi {delay:.0f}s rồi thử lại ({attempt + 1}/{max_attempts - 1})", flush=True)
+                time.sleep(delay)
+                self.rate_limit_wait += delay
+        raise AssertionError("unreachable")
 
     def _chat_anthropic(self, prompt: str) -> tuple[str, str, int, int]:
         # Claude Opus 5.5: thinking is always on and sampling params are removed; effort is the cost lever.
@@ -158,7 +184,7 @@ class MeteredLLM:
 
     def embed(self, text: str) -> list[float]:
         start = time.perf_counter()
-        response = self._embed_client.embeddings.create(model=self.embed_model_id, input=text)
+        response = self._retrying(self._embed_client.embeddings.create, model=self.embed_model_id, input=text)
         tokens = getattr(response.usage, "prompt_tokens", 0) or 0   # some OpenAI-compatible APIs omit usage
         self.usage += Usage(1, tokens, 0, price(self.embed_model_id, tokens), time.perf_counter() - start)
         return [float(value) for value in response.data[0].embedding]

@@ -1,0 +1,82 @@
+Chat model: gemini:gemini-3.5-flash-lite | Embedding: gemini:gemini-embedding-001 | top_k=3 | chunk_size=800 | chunks=176 | KG: 205 nodes / 472 rels
+
+== Indexing (one-off)
+pipeline  calls    in_tok  out_tok       USD  seconds
+flat        176         0        0   0.00000    106.2
+graph       196     38399     6756   0.02841    190.7
+
+== Querying (mean per question)
+pipeline  recall  judge   in_tok  out_tok       USD  seconds
+flat        0.51   1.50      696       72   0.00039     2.06
+graph       1.00   2.00     3985      199   0.00169     2.48
+
+== Per question
+--- Q1 [single-hop-law] flat recall=1.00 judge=2 1.45s
+Theo Luật Phòng, chống ma túy (được thể hiện trong ngữ cảnh), tiền chất là hóa chất không thể thiếu được trong quá trình điều chế, sản xuất chất ma túy được quy định trong danh mục tiền chất do Chính phủ ban hành.
+--- Q1 [single-hop-law] graph recall=1.00 judge=2 2.32s
+Theo khoản 4 Điều 2 Luật PCMT (Luật Phòng, chống ma túy), tiền chất là hóa chất không thể thiếu được trong quá trình điều chế, sản xuất chất ma túy được quy định trong danh mục tiền chất do Chính phủ ban hành.
+--- Q2 [single-hop-news] flat recall=1.00 judge=2 1.55s
+Trần Thanh Tuấn và Trần Minh Tâm.
+--- Q2 [single-hop-news] graph recall=1.00 judge=2 2.58s
+Dựa trên đoạn văn bản và dữ kiện từ knowledge graph, trong vụ đường dây mua bán hơn 36kg ma túy tại TP.HCM được xét xử ngày 28-9, những bị cáo lãnh án tử hình về tội mua bán trái phép chất ma túy là:
+- Trần Thanh Tuấn
+- Trần Minh Tâm
+--- Q3 [cross-kb] flat recall=0.33 judge=1 1.86s
+Dựa trên ngữ cảnh, Lê Minh Thành bị tuyên phạt 36 tháng tù về tội mua bán trái phép chất ma túy. 
+
+Tuy nhiên, ngữ cảnh không cung cấp thông tin về việc tội danh đó được quy định tại điều nào của Bộ luật Hình sự và với khung hình phạt cơ bản bao nhiêu. (Không đủ thông tin)
+--- Q3 [cross-kb] graph recall=1.00 judge=2 2.04s
+Dựa trên ngữ cảnh và dữ kiện từ knowledge graph:
+
+- **Số tháng tù:** Lê Minh Thành bị tuyên phạt **36 tháng tù** (theo bản án sơ thẩm).
+- **Về tội gì:** Tội **mua bán trái phép chất ma túy**.
+- **Điều luật và khung hình phạt cơ bản:** Tội mua bán trái phép chất ma túy được quy định tại **Điều 251 Bộ luật Hình sự**. Khoản 1 của Điều này quy định khung hình phạt cơ bản là phạt tù từ **02 năm đến 07 năm**.
+--- Q4 [cross-kb] flat recall=0.33 judge=1 1.55s
+Giang hồ 'Hoàng Nato' bị bắt về hành vi "tổ chức sử dụng trái phép chất ma túy". 
+
+Ngữ cảnh không đủ thông tin để biết hành vi đó có thể bị phạt tù tối đa bao nhiêu theo Bộ luật Hình sự.
+--- Q4 [cross-kb] graph recall=1.00 judge=2 3.10s
+Dựa trên ngữ cảnh và dữ kiện knowledge graph:
+
+- **Hành vi bị bắt:** Giang hồ "Hoàng Nato" (Dương Minh Tuấn) bị bắt về hành vi **tổ chức sử dụng trái phép chất ma túy**.
+- **Mức phạt tù tối đa:** 
+  - Theo **Điều 255 BLHS** (Tội tổ chức sử dụng trái phép chất ma túy), khoản 4 quy định mức phạt tù tối đa là **20 năm hoặc tù chung thân** đối với các trường hợp gây tổn hại cho sức khỏe của 02 người trở lên mà tỷ lệ tổn thương cơ thể của mỗi người 61% trở lên, hoặc làm chết 02 người trở lên. 
+  - Ngoài ra, trong dữ kiện liên quan đến các vụ án ma túy khác của chuyên án có nhắc tới các tội danh và Điều luật như **Điều 251 BLHS** (Tội mua bán trái phép chất ma túy) khoản 4 điểm b (khối lượng từ 100g trở lên) với mức phạt tù tối đa là 20 năm, tù chung thân hoặc tử hình.
+--- Q5 [cross-kb-multi-hop] flat recall=0.40 judge=1 3.93s
+Dựa trên ngữ cảnh:
+
+- **Tội danh:** Cái Quang Huy bị truy tố về tội "vận chuyển trái phép chất ma túy".
+- **Loại ma túy:** MDMA và Ketamine.
+- **Khóa khoản của điều luật và khung hình phạt:** Ngữ cảnh không đủ thông tin để trả lời.
+--- Q5 [cross-kb-multi-hop] graph recall=1.00 judge=2 2.18s
+Dựa trên ngữ cảnh và dữ kiện knowledge graph:
+
+- **Tội danh:** Cái Quang Huy bị truy tố về tội **vận chuyển trái phép chất ma túy**.
+- **Loại ma túy:** MDMA (và Ketamine).
+- **Khối lượng MDMA:** Hơn 9,6kg.
+- **Điều luật và khoản áp dụng:** **Khoản 4 điểm b Điều 250 Bộ luật Hình sự** (Tội vận chuyển trái phép chất ma túy).
+- **Khung hình phạt:** Phạt tù 20 năm, tù chung thân hoặc tử hình.
+--- Q6 [aggregation] flat recall=0.00 judge=2 2.03s
+Dựa trên ngữ cảnh, tất cả 3 vụ việc đều có liên quan đến ma túy MDMA:
+
+1. **Vụ việc [1]:** Lực lượng chức năng phát hiện bên trong thùng hàng có các viên nén màu xanh là MDMA (khối lượng gần 4,3kg) liên quan đến Đạt và Huy.
+2. **Vụ việc [2]:** Công an bắt quả tang Thành mang 5 viên nén màu trắng đến điểm hẹn để bán, kết quả giám định xác định đây là ma túy MDMA.
+3. **Vụ việc [3]:** Kết quả giám định xác định số viên nén hình tam giác màu hồng - xám trong kiện hàng gửi bởi Huy là MDMA (khối lượng hơn 5,3kg).
+--- Q6 [aggregation] graph recall=1.00 judge=2 2.67s
+Dựa trên ngữ cảnh và dữ kiện knowledge graph, những vụ việc liên quan đến ma túy MDMA bao gồm:
+
+1. **Vụ việc 'Vụ vận chuyển hơn 10kg ma túy qua sân bay Nội Bài do Cái Quang Huy chủ mưu'** (giai đoạn sơ thẩm): Cái Quang Huy bị cáo buộc vận chuyển trái phép hơn 9,6kg MDMA từ Đức về Việt Nam qua sân bay Nội Bài, lôi kéo Nguyễn Tiến Đạt tham gia nhận hàng.
+   - Số Điều luật liên quan: **Điều 250 BLHS** (khoản 4, điểm b).
+
+2. **Vụ việc 'Vụ vận chuyển ma túy qua sân bay Nội Bài liên quan đến Cái Quang Huy'** (giai đoạn khác): Cái Quang Huy bị cáo buộc hai lần vận chuyển hơn 9,6kg MDMA về Việt Nam qua sân bay Nội Bài.
+   - Số Điều luật liên quan: **Điều 250 BLHS** (khoản 4, điểm b).
+
+3. **Vụ việc 'Vụ mua bán trái phép chất ma túy tại Hà Nội liên quan đến nhóm của Trịnh Vũ Kiên'** (giai đoạn phúc thẩm) / Liên quan đến Lê Minh Thành (bán 5 viên ma túy "kẹo" / MDMA): Ba thanh niên góp tiền cho Lê Minh Thành mua ma túy dùng trong tiệc sinh nhật.
+
+4. **Vụ việc 'Vụ bắt giang hồ Hoàng Nato và 126 người liên quan 8 đường dây ma túy'** (giai đoạn bắt giữ): Công an TP.HCM triệt phá 8 đường dây tội phạm ma túy, thu giữ khoảng 100g ma túy tổng hợp.
+   - Số Điều luật liên quan: **Điều 249 BLHS** (khoản 4, điểm b) và **Điều 251 BLHS** (khoản 4, điểm b).
+
+5. **Vụ việc 'Vụ triệt phá 8 đường dây ma túy liên quan 'Hoàng Nato''** (giai đoạn bắt giữ): Công an TP.HCM triệt phá 8 đường dây ma túy, thu giữ lượng lớn ma túy tổng hợp.
+
+6. **Vụ việc 'Vụ tổ chức sử dụng trái phép chất ma túy tại Sầm Sơn và Viện Pháp y tâm thần Trung ương'** (giai đoạn sơ thẩm): Liên quan đến 0,686g MDMA.
+   - Số Điều luật liên quan: **Điều 249 BLHS** (khoản 1, điểm c).
